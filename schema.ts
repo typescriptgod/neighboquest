@@ -1,89 +1,227 @@
-import { server } from '$/server';
-
-server.addSchema({
-	$id: 'auth',
-	type: 'object',
-	properties: {
-		authorization: { type: 'string' },
-	},
-});
-
-server.addSchema({
-	$id: 'uuid',
-	type: 'string',
-	format: 'uuid',
-});
-
-server.addSchema({
-	$id: 'leaderboardUser',
-	type: 'object',
-	properties: {
-		id: { $ref: 'uuid#' },
-		username: { type: 'string' },
-		points: { type: 'number' },
-	},
-});
-
-server.addSchema({
-	$id: 'place',
-	type: 'object',
-	properties: {
-		id: { $ref: 'uuid#' },
-		name: { type: 'string' },
-		icon: { type: 'string' },
-		placeId: { type: 'string' },
-		address: { type: 'string' },
-		types: {
-			type: 'array',
-			items: { type: 'string' },
+export const placeSchema = {
+	description: 'Get place by id',
+	tags: ['place'],
+	params: {
+		type: 'object',
+		properties: {
+			placeId: { type: 'string', format: 'uuid' },
 		},
-		point: {
+		required: ['placeId'],
+	},
+	response: {
+		200: {
+			description: 'Place retrieved successfully',
 			type: 'object',
 			properties: {
-				type: {
-					type: 'string',
-					enum: ['Point'],
+				success: {
+					type: 'boolean',
+					enum: [true],
 				},
-				coordinates: {
-					type: 'array',
-					items: { type: 'number' },
-					minItems: 2,
-					maxItems: 2,
+				data: { $ref: 'place#' },
+			},
+		},
+		404: {
+			description: 'Place not found',
+			type: 'object',
+			properties: {
+				success: {
+					type: 'boolean',
+					enum: [false],
+				},
+				message: { type: 'string' },
+			},
+		},
+	},
+};
+
+export const placeClaimSchema = {
+	description: 'Claim points for visitng a place',
+	tags: ['place'],
+	params: {
+		type: 'object',
+		properties: {
+			placeId: { type: 'string', format: 'uuid' },
+		},
+		required: ['placeId'],
+	},
+	headers: { $ref: 'auth#' },
+	response: {
+		200: {
+			description: 'Place claimed successfully',
+			type: 'object',
+			properties: {
+				success: {
+					type: 'boolean',
+					enum: [true],
 				},
 			},
 		},
-		rating: {
+		400: {
+			description: 'Place already claimed',
+			type: 'object',
+			properties: {
+				success: {
+					type: 'boolean',
+					enum: [false],
+				},
+				message: { type: 'string' },
+			},
+		},
+		404: {
+			description: 'Place not found',
+			type: 'object',
+			properties: {
+				success: {
+					type: 'boolean',
+					enum: [false],
+				},
+				message: { type: 'string' },
+			},
+		},
+	},
+};
+
+export const placeQuestionPostSchema = {
+	description: 'Answer questions for a place',
+	tags: ['place'],
+	params: {
+		type: 'object',
+		properties: {
+			placeId: { type: 'string', format: 'uuid' },
+			questionId: { type: 'string', format: 'uuid' },
+		},
+		required: ['placeId', 'questionId'],
+	},
+	body: {
+		type: 'array',
+		items: {
 			type: 'number',
 			minimum: 0,
-			maximum: 5,
+			maximum: 3,
 		},
-		ratings: {
-			type: 'number',
-			minimum: 0,
-		},
-		image: { type: 'string' },
-		about: { type: 'string' },
 	},
-});
+	response: {
+		200: {
+			description: 'Questions answered successfully',
+			type: 'object',
+			properties: {
+				success: {
+					type: 'boolean',
+					enum: [true],
+				},
+				data: {
+					type: 'array',
+					items: { type: 'number' },
+				},
+			},
+		},
+		404: {
+			description: 'Place not found',
+			type: 'object',
+			properties: {
+				success: {
+					type: 'boolean',
+					enum: [false],
+				},
+				message: { type: 'string' },
+			},
+		},
+	},
+};
 
-server.addSchema({
-	$id: 'placeWithDistance',
-	type: 'object',
-	properties: {
-		// @ts-expect-error - The place schema is defined above
-		...server.getSchema('place').properties,
-		distance: { type: 'number' },
+export const placeQuestionGetSchema = {
+	description: 'Get questions for a place',
+	tags: ['place'],
+	params: {
+		type: 'object',
+		properties: {
+			placeId: { type: 'string', format: 'uuid' },
+		},
+		required: ['placeId'],
 	},
-});
-
-server.addSchema({
-	$id: 'question',
-	type: 'object',
-	properties: {
-		question: { type: 'string' },
-		answers: {
-			type: 'array',
-			items: { type: 'string' },
+	response: {
+		200: {
+			description: 'Questions retrieved successfully',
+			type: 'object',
+			properties: {
+				success: {
+					type: 'boolean',
+					enum: [true],
+				},
+				data: {
+					id: { type: 'string', format: 'uuid' },
+					questions: {
+						type: 'array',
+						items: { $ref: 'question#' },
+					},
+				},
+			},
+		},
+		404: {
+			description: 'Place not found',
+			type: 'object',
+			properties: {
+				success: {
+					type: 'boolean',
+					enum: [false],
+				},
+				message: { type: 'string' },
+			},
 		},
 	},
-});
+};
+
+export const placeSearchSchema = {
+	description: 'Search for places',
+	tags: ['place'],
+	querystring: {
+		type: 'object',
+		properties: {
+			lat: { type: 'number', minimum: -90, maximum: 90 },
+			lng: { type: 'number', minimum: -180, maximum: 180 },
+			type: {
+				type: 'array',
+				items: {
+					type: 'string',
+					enum: [
+						'museum',
+						'library',
+						'night_club',
+						'park',
+						'campground',
+						'art_gallery',
+						'aquarium',
+						'zoo',
+						'amusement_park',
+						'florist',
+						'tourist_attraction',
+						'bowling_alley',
+						'spa',
+						'wheelchair',
+					],
+				},
+				default: [],
+			},
+			distance: { type: 'number', minimum: 0, maximum: 50_000, default: 50_000 },
+			limit: { type: 'number', minimum: 1, maximum: 50, default: 10 },
+			skip: { type: 'number', minimum: 0, default: 0 },
+		},
+		required: ['lat', 'lng'],
+	},
+	response: {
+		200: {
+			description: 'Places retrieved successfully',
+			type: 'object',
+			properties: {
+				success: {
+					type: 'boolean',
+					enum: [true],
+				},
+				data: {
+					type: 'array',
+					items: { $ref: 'placeWithDistance#' },
+				},
+			},
+		},
+	},
+};
